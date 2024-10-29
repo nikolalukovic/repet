@@ -1,4 +1,4 @@
-package shared
+package server
 
 type RepetErrorCode int16
 

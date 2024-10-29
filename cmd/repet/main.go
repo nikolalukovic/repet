@@ -11,7 +11,7 @@ func main() {
 	cfg, err := server.ConsumeConfiguration()
 
 	if err != nil {
-		fmt.Println(err)
+		server.LogError(err)
 		os.Exit(1)
 	}
 

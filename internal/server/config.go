@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/nikolalukovic/repet/internal/shared"
 	"github.com/spf13/viper"
 )
 
@@ -15,11 +14,11 @@ func ConsumeConfiguration() (*RepetConfig, error) {
 	viper.AutomaticEnv()
 
 	if !viper.IsSet("ADDR") {
-		return nil, &shared.RepetError{Code: shared.ConfigAddrNotSet}
+		return nil, &RepetError{Code: ConfigAddrNotSet}
 	}
 
 	if !viper.IsSet("PORT") {
-		return nil, &shared.RepetError{Code: shared.ConfigPortNotSet}
+		return nil, &RepetError{Code: ConfigPortNotSet}
 	}
 
 	addr := viper.GetString("ADDR")
