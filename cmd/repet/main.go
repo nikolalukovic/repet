@@ -1,19 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/nikolalukovic/repet/internal/server"
+	"github.com/nikolalukovic/repet/cmd/repet/commands"
 )
 
 func main() {
-	cfg, err := server.ConsumeConfiguration()
-
-	if err != nil {
-		server.LogError(err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("%#v\n", cfg)
+	commands.Execute()
 }
