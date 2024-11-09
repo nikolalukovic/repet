@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -37,6 +38,31 @@ func StartServer() {
 func handleConnection(conn *net.Conn) {
 	reader := bufio.NewReader(*conn)
 
+	rawMessage, err := ExtractMessage(reader)
+
+	if err != nil {
+		logAndClose(err, conn)
+		return
+	}
+
+	err = ExecuteCommand(context.Background(), rawMessage)
+
+	if err != nil {
+		logAndClose(err, conn)
+		return
+	}
+
+	// version, err := reader.ReadString(';')
+	// if err != nil {
+	// 	LogError(err)
+	// 	err := (*conn).Close()
+	// 	if err != nil {
+	// 		LogError(err)
+	// 	}
+	// }
+	//
+	// length, err := reader.ReadBytes(';')
+
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
@@ -50,5 +76,16 @@ func handleConnection(conn *net.Conn) {
 		}
 
 		(*conn).Write([]byte(fmt.Sprintf("Received: %s", message)))
+	}
+
+}
+
+func logAndClose(err error, conn *net.Conn) {
+	LogError(err)
+
+	connErr := (*conn).Close()
+
+	if connErr != nil {
+		LogError(err)
 	}
 }
