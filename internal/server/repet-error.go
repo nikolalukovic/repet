@@ -9,6 +9,8 @@ const (
 	ConfigAddrNotSet
 
 	CommandNotFound
+
+	UnsupportedMessageVersion
 )
 
 type RepetError struct {
@@ -24,6 +26,8 @@ func (re *RepetError) Error() string {
 		return "REPET_PORT not set as an environemnt variable"
 	case CommandNotFound:
 		return fmt.Sprintf("Specified %s command not found", re.Details)
+	case UnsupportedMessageVersion:
+		return fmt.Sprintf("Passed %s version is not supported", re.Details)
 	default:
 		panic("Repet error code not handled")
 	}

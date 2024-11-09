@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"os"
 )
@@ -17,7 +16,7 @@ func StartServer(ctx context.Context) {
 
 	defer listener.Close()
 
-	fmt.Printf("Listening on: %s\n", ipAddr)
+	LogInfo("Listening on: ", ipAddr)
 
 	for {
 		conn, err := listener.Accept()
@@ -42,6 +41,8 @@ func handleConnection(ctx context.Context, conn net.Conn) {
 			logAndClose(err, conn)
 			return
 		}
+
+		LogInfo(rawMessage)
 
 		err = rcs.ExecuteCommand(rawMessage)
 

@@ -2,21 +2,28 @@ package server
 
 import (
 	"bufio"
+	"context"
 	"net"
 )
 
 type RepetConnectionHandler struct {
-	C net.Conn
+	C   net.Conn
+	Ctx context.Context
 }
 
-func NewRepetConnectionHandler(conn net.Conn) RepetConnectionHandler {
+func NewRepetConnectionHandler(ctx context.Context, conn net.Conn) RepetConnectionHandler {
 	return RepetConnectionHandler{
-		C: conn,
+		C:   conn,
+		Ctx: ctx,
 	}
 }
 
 func (h RepetConnectionHandler) ParseMessage() (RawMessage, error) {
-	_ = bufio.NewReader(h.C)
+	r := bufio.NewReader(h.C)
 
-	return RawMessage{}, nil
+	return ExtractMessage(r)
+}
+
+func (h RepetConnectionHandler) ExecuteCommand(msg RawMessage) error {
+	return nil
 }
