@@ -1,22 +1,17 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"net"
 	"os"
 )
 
-type Server struct {
-	listenAddr net.TCPAddr
-}
-
-func StartServer() {
+func StartServer(ctx context.Context) {
 	ipAddr := "localhost:8080"
 	listener, err := net.Listen("tcp", ipAddr)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		LogError(err)
 		os.Exit(1)
 	}
 
@@ -27,63 +22,40 @@ func StartServer() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			LogWarning(err)
 			continue
 		}
 
-		go handleConnection(&conn)
+		go handleConnection(ctx, conn)
 	}
 }
 
-func handleConnection(conn *net.Conn) {
-	reader := bufio.NewReader(*conn)
+func handleConnection(ctx context.Context, conn net.Conn) {
+	rcs := NewRepetConnectionHandler(ctx, conn)
 
-	rawMessage, err := ExtractMessage(reader)
-
-	if err != nil {
-		logAndClose(err, conn)
-		return
-	}
-
-	err = ExecuteCommand(context.Background(), rawMessage)
-
-	if err != nil {
-		logAndClose(err, conn)
-		return
-	}
-
-	// version, err := reader.ReadString(';')
-	// if err != nil {
-	// 	LogError(err)
-	// 	err := (*conn).Close()
-	// 	if err != nil {
-	// 		LogError(err)
-	// 	}
-	// }
-	//
-	// length, err := reader.ReadBytes(';')
+	defer conn.Close()
 
 	for {
-		message, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			err := (*conn).Close()
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-			}
+		rawMessage, err := rcs.ParseMessage()
 
+		if err != nil {
+			logAndClose(err, conn)
 			return
 		}
 
-		(*conn).Write([]byte(fmt.Sprintf("Received: %s", message)))
-	}
+		err = rcs.ExecuteCommand(rawMessage)
 
+		if err != nil {
+			logAndClose(err, conn)
+			return
+		}
+	}
 }
 
-func logAndClose(err error, conn *net.Conn) {
+func logAndClose(err error, conn net.Conn) {
 	LogError(err)
 
-	connErr := (*conn).Close()
+	connErr := conn.Close()
 
 	if connErr != nil {
 		LogError(err)
