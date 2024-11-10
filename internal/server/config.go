@@ -5,8 +5,8 @@ import (
 )
 
 type RepetConfig struct {
-	Port    int32  `env:"REPET_PORT"`
-	Address string `env:"REPET_ADDR"`
+	Port    int32
+	Address string
 }
 
 func ConsumeConfiguration() (*RepetConfig, error) {

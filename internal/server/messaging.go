@@ -16,7 +16,7 @@ type RawMessage struct {
 
 var EmptyRawMessage = RawMessage{}
 
-func ExtractMessage(reader *bufio.Reader) (RawMessage, error) {
+func extractMessage(reader *bufio.Reader) (RawMessage, error) {
 	strVersion, err := reader.ReadString(';')
 	if err != nil {
 		return EmptyRawMessage, err
@@ -43,15 +43,21 @@ func ExtractMessage(reader *bufio.Reader) (RawMessage, error) {
 }
 
 func parseVersion0Message(reader *bufio.Reader) (RawMessage, error) {
-	strLength, err := reader.ReadString(';')
+	strLengthDirty, err := reader.ReadString(';')
 
 	if err != nil {
 		return EmptyRawMessage, err
 	}
 
-	l := strings.Split(strLength, ";")
+	splittedStrLength := strings.Split(strLengthDirty, ";")
 
-	length, err := strconv.ParseInt(l[0], 10, 64)
+	if len(splittedStrLength) < 2 {
+		return EmptyRawMessage, &RepetError{
+			Code: UnsupportedMessageVersion,
+		}
+	}
+
+	length, err := strconv.ParseInt(splittedStrLength[0], 10, 64)
 	if err != nil {
 		return EmptyRawMessage, err
 	}

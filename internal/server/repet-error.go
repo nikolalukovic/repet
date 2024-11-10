@@ -8,9 +8,11 @@ const (
 	ConfigPortNotSet RepetErrorCode = iota
 	ConfigAddrNotSet
 
-	CommandNotFound
-
 	UnsupportedMessageVersion
+	UnableToParseMessage
+
+	CommandNotFound
+	MalformedCommand
 )
 
 type RepetError struct {
@@ -28,6 +30,10 @@ func (re *RepetError) Error() string {
 		return fmt.Sprintf("Specified %s command not found", re.Details)
 	case UnsupportedMessageVersion:
 		return fmt.Sprintf("Passed %s version is not supported", re.Details)
+	case MalformedCommand:
+		return fmt.Sprintf("Command is malformed: %s", re.Details)
+	case UnableToParseMessage:
+		return fmt.Sprintf("Unable to parse message: %s", re.Details)
 	default:
 		panic("Repet error code not handled")
 	}

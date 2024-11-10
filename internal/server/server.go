@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net"
 	"os"
 )
@@ -25,6 +27,8 @@ func StartServer(ctx context.Context) {
 			continue
 		}
 
+		LogInfo("Got a connection")
+
 		go handleConnection(ctx, conn)
 	}
 }
@@ -38,11 +42,15 @@ func handleConnection(ctx context.Context, conn net.Conn) {
 		rawMessage, err := rcs.ParseMessage()
 
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				// client closed the connection
+				// just get out of the handler
+				LogInfo("Client closed connection")
+				break
+			}
 			logAndClose(err, conn)
 			return
 		}
-
-		LogInfo(rawMessage)
 
 		err = rcs.ExecuteCommand(rawMessage)
 

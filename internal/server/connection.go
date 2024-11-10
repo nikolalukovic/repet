@@ -21,9 +21,9 @@ func NewRepetConnectionHandler(ctx context.Context, conn net.Conn) RepetConnecti
 func (h RepetConnectionHandler) ParseMessage() (RawMessage, error) {
 	r := bufio.NewReader(h.C)
 
-	return ExtractMessage(r)
+	return extractMessage(r)
 }
 
 func (h RepetConnectionHandler) ExecuteCommand(msg RawMessage) error {
-	return nil
+	return executeCommand(h.Ctx, msg)
 }
