@@ -10,7 +10,11 @@ import (
 
 const setDenom = "set"
 const getDenom = "get"
+
+const pubDenom = "pub"
 const subDenom = "sub"
+
+const idDenom = "id"
 
 type setCommand struct {
 	key   string
@@ -18,12 +22,21 @@ type setCommand struct {
 	ttl   time.Duration
 }
 
-type subCommand struct {
+type getCommand struct {
 	key string
 }
 
-type getCommand struct {
-	key string
+type subCommand struct {
+	channel string
+}
+
+type pubCommand struct {
+	channel string
+	value   string
+}
+
+type idCommand struct {
+	id string
 }
 
 func executeSetCommand(cmd setCommand) error {
@@ -101,9 +114,34 @@ func parseCommand(message RawMessage) (interface{}, error) {
 				Details: fmt.Sprintf("%v", parts),
 			}
 		}
-		key := parts[1]
+		channel := parts[1]
 		return subCommand{
-			key: key,
+			channel: channel,
+		}, nil
+	case pubDenom:
+		if len(parts) != 3 {
+			return nil, &RepetError{
+				Code:    MalformedCommand,
+				Details: fmt.Sprintf("%v", parts),
+			}
+		}
+		channel := parts[1]
+		value := parts[2]
+
+		return pubCommand{
+			channel: channel,
+			value:   value,
+		}, nil
+	case idDenom:
+		if len(parts) != 2 {
+			return nil, &RepetError{
+				Code:    MalformedCommand,
+				Details: fmt.Sprintf("%v", parts),
+			}
+		}
+		id := parts[1]
+		return idCommand{
+			id: id,
 		}, nil
 	default:
 		return nil, &RepetError{
