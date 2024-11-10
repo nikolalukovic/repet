@@ -16,7 +16,12 @@ func StartServer(ctx context.Context) {
 		os.Exit(1)
 	}
 
-	defer listener.Close()
+	defer func(listener net.Listener) {
+		err := listener.Close()
+		if err != nil {
+			LogError(err)
+		}
+	}(listener)
 
 	LogInfo("Listening on: ", ipAddr)
 
@@ -36,7 +41,12 @@ func StartServer(ctx context.Context) {
 func handleConnection(ctx context.Context, conn net.Conn) {
 	rcs := NewRepetConnectionHandler(ctx, conn)
 
-	defer conn.Close()
+	defer func(conn net.Conn) {
+		err := conn.Close()
+		if err != nil {
+			LogError(err)
+		}
+	}(conn)
 
 	for {
 		rawMessage, err := rcs.ParseMessage()

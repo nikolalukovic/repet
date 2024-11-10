@@ -1,10 +1,11 @@
 package server
 
 import (
-	"context"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const setDenom = "set"
@@ -14,7 +15,7 @@ const subDenom = "sub"
 type setCommand struct {
 	key   string
 	value string
-	ttl   uint64
+	ttl   time.Duration
 }
 
 type subCommand struct {
@@ -25,38 +26,28 @@ type getCommand struct {
 	key string
 }
 
-func executeCommand(ctx context.Context, message RawMessage) error {
-	cmd, err := parseCommand(message)
-	if err != nil {
-		return err
-	}
+func executeSetCommand(cmd setCommand) error {
+	setValue(cmd)
+	return nil
+}
 
-	switch cmd.(type) {
-	case setCommand:
-		return executeSetCommand(ctx, cmd.(setCommand))
-	case subCommand:
-		return executeSubCommand(ctx, cmd.(subCommand))
-	case getCommand:
-		return executeGetCommand(ctx, cmd.(getCommand))
-	default:
-		return &RepetError{
-			Code: CommandNotFound,
+func executeSubCommand(command subCommand) error {
+	return nil
+}
+
+func executeGetCommand(conn net.Conn, cmd getCommand) error {
+	value, ok := getValue(cmd.key)
+	if ok {
+		_, err := conn.Write([]byte("0;" + strconv.Itoa(len(value)) + ";" + value))
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err := conn.Write([]byte("0;0"))
+		if err != nil {
+			return nil
 		}
 	}
-}
-
-func executeSetCommand(ctx context.Context, command setCommand) error {
-	LogInfo(command)
-	return nil
-}
-
-func executeSubCommand(ctx context.Context, command subCommand) error {
-	LogInfo(command)
-	return nil
-}
-
-func executeGetCommand(ctx context.Context, command getCommand) error {
-	LogInfo(command)
 	return nil
 }
 
@@ -89,7 +80,7 @@ func parseCommand(message RawMessage) (interface{}, error) {
 		return setCommand{
 			key:   key,
 			value: value,
-			ttl:   ttl,
+			ttl:   time.Duration(ttl * uint64(time.Millisecond)),
 		}, nil
 	case getDenom:
 		if len(parts) != 2 {

@@ -10,6 +10,7 @@ import (
 func main() {
 	ctx := context.Background()
 
+	server.InitCache()
 	server.StartServer(ctx)
 
 	commands.Execute()

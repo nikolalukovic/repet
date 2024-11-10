@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// <version>;<length>;<content>
+// RawMessage <version>;<length>;<content>
 type RawMessage struct {
 	Version int8
 	Length  int64
@@ -21,6 +21,8 @@ func extractMessage(reader *bufio.Reader) (RawMessage, error) {
 	if err != nil {
 		return EmptyRawMessage, err
 	}
+
+	strVersion = strings.TrimSpace(strVersion)
 
 	if len(strVersion) > 2 {
 		return EmptyRawMessage, &RepetError{
@@ -49,15 +51,15 @@ func parseVersion0Message(reader *bufio.Reader) (RawMessage, error) {
 		return EmptyRawMessage, err
 	}
 
-	splittedStrLength := strings.Split(strLengthDirty, ";")
+	splitStrLength := strings.Split(strLengthDirty, ";")
 
-	if len(splittedStrLength) < 2 {
+	if len(splitStrLength) < 2 {
 		return EmptyRawMessage, &RepetError{
 			Code: UnsupportedMessageVersion,
 		}
 	}
 
-	length, err := strconv.ParseInt(splittedStrLength[0], 10, 64)
+	length, err := strconv.ParseInt(splitStrLength[0], 10, 64)
 	if err != nil {
 		return EmptyRawMessage, err
 	}
