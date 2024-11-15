@@ -3,29 +3,28 @@ package server
 import (
 	"bufio"
 	"context"
-	"net"
 )
 
 type RepetConnectionHandler struct {
-	R   *bufio.Reader
-	C   net.Conn
-	Ctx context.Context
+	Reader  *bufio.Reader
+	Client  *Client
+	Context context.Context
 }
 
-func NewRepetConnectionHandler(ctx context.Context, conn net.Conn) RepetConnectionHandler {
-	r := bufio.NewReader(conn)
-	return RepetConnectionHandler{
-		R:   r,
-		C:   conn,
-		Ctx: ctx,
+func NewRepetConnectionHandler(ctx context.Context, c *Client) *RepetConnectionHandler {
+	r := bufio.NewReader(c.conn)
+	return &RepetConnectionHandler{
+		Reader:  r,
+		Client:  c,
+		Context: ctx,
 	}
 }
 
-func (h RepetConnectionHandler) ParseMessage() (RawMessage, error) {
-	return extractMessage(h.R)
+func (h *RepetConnectionHandler) ParseMessage() (RawMessage, error) {
+	return extractMessage(h.Reader)
 }
 
-func (h RepetConnectionHandler) ExecuteCommand(msg RawMessage) error {
+func (h *RepetConnectionHandler) ExecuteCommand(msg RawMessage, server Server) error {
 	cmd, err := parseCommand(msg)
 	if err != nil {
 		return err
@@ -37,15 +36,19 @@ func (h RepetConnectionHandler) ExecuteCommand(msg RawMessage) error {
 		if err != nil {
 			return err
 		}
-		_, err = h.C.Write([]byte("0;2;OK"))
+		_, err = h.Client.conn.Write([]byte("0;2;OK"))
 		if err != nil {
 			return err
 		}
 		return nil
-	case subCommand:
-		return executeSubCommand(cmd.(subCommand))
 	case getCommand:
-		return executeGetCommand(h.C, cmd.(getCommand))
+		return executeGetCommand(*h.Client, cmd.(getCommand))
+	case subCommand:
+		return executeSubCommand(h.Client, cmd.(subCommand))
+	case pubCommand:
+		return executePubCommand(*h.Client, server, cmd.(pubCommand))
+	case nameCommand:
+		return executeNameCommand(h.Client, cmd.(nameCommand))
 	default:
 		return &RepetError{
 			Code: CommandNotFound,

@@ -11,7 +11,10 @@ func main() {
 	ctx := context.Background()
 
 	server.InitCache()
-	server.StartServer(ctx)
+
+	srv := server.NewServer("localhost:8080")
+
+	srv.StartServer(ctx)
 
 	commands.Execute()
 }

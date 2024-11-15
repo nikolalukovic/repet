@@ -3,14 +3,35 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 	"io"
 	"net"
 	"os"
 )
 
-func StartServer(ctx context.Context) {
-	ipAddr := "localhost:8080"
-	listener, err := net.Listen("tcp", ipAddr)
+type Client struct {
+	conn     net.Conn
+	id       string
+	name     *string
+	channels []string
+}
+
+type Server struct {
+	ListenAddr string
+	// <client.id>:<client>
+	conns map[string]*Client
+}
+
+func NewServer(listenAddr string) Server {
+	return Server{
+		ListenAddr: listenAddr,
+		conns:      make(map[string]*Client),
+	}
+}
+
+func (s Server) StartServer(ctx context.Context) {
+	listener, err := net.Listen("tcp", s.ListenAddr)
 	if err != nil {
 		LogError(err)
 		os.Exit(1)
@@ -23,7 +44,7 @@ func StartServer(ctx context.Context) {
 		}
 	}(listener)
 
-	LogInfo("Listening on: ", ipAddr)
+	LogInfo("Listening on: ", s.ListenAddr)
 
 	for {
 		conn, err := listener.Accept()
@@ -32,21 +53,39 @@ func StartServer(ctx context.Context) {
 			continue
 		}
 
-		LogInfo("Got a connection")
+		id, err := gonanoid.New()
+		if err != nil {
+			LogError(err)
+			err := conn.Close()
+			if err != nil {
+				LogError(err)
+				continue
+			}
+			continue
+		}
 
-		go handleConnection(ctx, conn)
+		cl := Client{
+			conn: conn,
+			id:   id,
+		}
+
+		s.conns[cl.id] = &cl
+
+		LogInfo(fmt.Sprintf("Got a connection: %s", cl.id))
+
+		go handleConnection(ctx, &cl, s)
 	}
 }
 
-func handleConnection(ctx context.Context, conn net.Conn) {
-	rcs := NewRepetConnectionHandler(ctx, conn)
+func handleConnection(ctx context.Context, client *Client, server Server) {
+	rcs := NewRepetConnectionHandler(ctx, client)
 
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {
 			LogError(err)
 		}
-	}(conn)
+	}(client.conn)
 
 	for {
 		rawMessage, err := rcs.ParseMessage()
@@ -55,17 +94,17 @@ func handleConnection(ctx context.Context, conn net.Conn) {
 			if errors.Is(err, io.EOF) {
 				// client closed the connection
 				// just get out of the handler
-				LogInfo("Client closed connection")
+				LogInfo(fmt.Sprintf("Client %s closed connection", rcs.Client.id))
 				break
 			}
-			logAndClose(err, conn)
+			logAndClose(err, client.conn)
 			return
 		}
 
-		err = rcs.ExecuteCommand(rawMessage)
+		err = rcs.ExecuteCommand(rawMessage, server)
 
 		if err != nil {
-			logAndClose(err, conn)
+			logAndClose(err, client.conn)
 			return
 		}
 	}

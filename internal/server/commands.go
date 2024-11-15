@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -35,8 +34,8 @@ type pubCommand struct {
 	value   string
 }
 
-type idCommand struct {
-	id string
+type nameCommand struct {
+	name string
 }
 
 func executeSetCommand(cmd setCommand) error {
@@ -44,23 +43,49 @@ func executeSetCommand(cmd setCommand) error {
 	return nil
 }
 
-func executeSubCommand(command subCommand) error {
-	return nil
-}
-
-func executeGetCommand(conn net.Conn, cmd getCommand) error {
+func executeGetCommand(c Client, cmd getCommand) error {
 	value, ok := getValue(cmd.key)
 	if ok {
-		_, err := conn.Write([]byte("0;" + strconv.Itoa(len(value)) + ";" + value))
+		fmtMsg := fmt.Sprintf("0;%d;%s", len(value), value)
+		_, err := c.conn.Write([]byte(fmtMsg))
 		if err != nil {
 			return err
 		}
 	} else {
-		_, err := conn.Write([]byte("0;0"))
+		_, err := c.conn.Write([]byte("0;0"))
 		if err != nil {
 			return nil
 		}
 	}
+	return nil
+}
+
+func executeSubCommand(c *Client, command subCommand) error {
+	c.channels = append(c.channels, command.channel)
+	LogInfo(fmt.Sprintf("Connection %s subscribed to %s", c.id, command.channel))
+	return nil
+}
+
+func executePubCommand(c Client, s Server, cmd pubCommand) error {
+	LogInfo(fmt.Sprintf("Connection %s wants to publish \"%s\" to channel %s", c.id, cmd.value, cmd.channel))
+	for _, client := range s.conns {
+		for _, channel := range client.channels {
+			if cmd.channel == channel {
+				msg := fmt.Sprintf("chan %s %s", channel, cmd.value)
+				fmtMsg := fmt.Sprintf("0;%d;%s", len(msg), msg)
+				_, err := client.conn.Write([]byte(fmtMsg))
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func executeNameCommand(c *Client, cmd nameCommand) error {
+	c.name = &cmd.name
+	LogInfo(fmt.Sprintf("Connection %s has been named to \"%s\"", c.id, *c.name))
 	return nil
 }
 
@@ -140,8 +165,8 @@ func parseCommand(message RawMessage) (interface{}, error) {
 			}
 		}
 		id := parts[1]
-		return idCommand{
-			id: id,
+		return nameCommand{
+			name: id,
 		}, nil
 	default:
 		return nil, &RepetError{
