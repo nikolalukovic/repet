@@ -43,8 +43,10 @@ func (h *RepetConnectionHandler) ExecuteCommand(msg RawMessage, server Server) e
 		return nil
 	case getCommand:
 		return executeGetCommand(*h.Client, cmd.(getCommand))
-	case subCommand:
-		return executeSubCommand(h.Client, cmd.(subCommand))
+	case subChanCommand:
+		return executeSubChanCommand(h.Client, cmd.(subChanCommand))
+	case subKeyCommand:
+		return executeSubKeyCommand(h.Client, cmd.(subKeyCommand))
 	case pubCommand:
 		return executePubCommand(*h.Client, server, cmd.(pubCommand))
 	case nameCommand:

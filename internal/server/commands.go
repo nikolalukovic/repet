@@ -15,25 +15,35 @@ const subDenom = "sub"
 
 const idDenom = "id"
 
+// set "key" "value"
 type setCommand struct {
 	key   string
 	value string
 	ttl   time.Duration
 }
 
+// get "key"
 type getCommand struct {
 	key string
 }
 
-type subCommand struct {
+// sub chan "value"
+type subChanCommand struct {
 	channel string
 }
 
+// sub key "value"
+type subKeyCommand struct {
+	key string
+}
+
+// pub "chan" "value"
 type pubCommand struct {
 	channel string
 	value   string
 }
 
+// name "value"
 type nameCommand struct {
 	name string
 }
@@ -60,9 +70,13 @@ func executeGetCommand(c Client, cmd getCommand) error {
 	return nil
 }
 
-func executeSubCommand(c *Client, command subCommand) error {
+func executeSubChanCommand(c *Client, command subChanCommand) error {
 	c.channels = append(c.channels, command.channel)
 	LogInfo(fmt.Sprintf("Connection %s subscribed to %s", c.id, command.channel))
+	return nil
+}
+
+func executeSubKeyCommand(c *Client, command subKeyCommand) error {
 	return nil
 }
 
@@ -133,16 +147,26 @@ func parseCommand(message RawMessage) (interface{}, error) {
 			key: key,
 		}, nil
 	case subDenom:
-		if len(parts) != 2 {
+		if len(parts) != 3 {
 			return nil, &RepetError{
 				Code:    MalformedCommand,
 				Details: fmt.Sprintf("%v", parts),
 			}
 		}
-		channel := parts[1]
-		return subCommand{
-			channel: channel,
-		}, nil
+		keyOrChan := parts[1]
+		if keyOrChan == "chan" {
+			return subChanCommand{
+				channel: keyOrChan,
+			}, nil
+		} else if keyOrChan == "key" {
+			return subKeyCommand{
+				key: keyOrChan,
+			}, nil
+		}
+		return nil, &RepetError{
+			Code:    MalformedCommand,
+			Details: fmt.Sprintf("Unsupported value to subscribe to: %s", keyOrChan),
+		}
 	case pubDenom:
 		if len(parts) != 3 {
 			return nil, &RepetError{
